@@ -401,6 +401,7 @@ async function fetchEvents(){
       categoria:  normCat(r.categoria||r.category||''),
       descrizione:r.descrizione||r.description||'',
       luogo:      r.luogo||r.place||'',
+      immagine:   r.immagine||'',
     })).filter(e=>e.date);
     allEvents.sort((a,b)=>a.date-b.date);
     renderAll();
