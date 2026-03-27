@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendario Eventi — Biblioteca</title>
+<!-- INIZIO META TAG OPEN GRAPH DI BASE -->
+<meta property="og:title" content="Calendario Eventi | Biblioteca Comunale" />
+<meta property="og:description" content="Scopri tutti gli eventi, i laboratori e gli incontri in programma nella nostra biblioteca." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://iltuosito.netlify.app" /> <!-- Cambia con il tuo link Netlify -->
+<meta property="og:image" content="https://url-di-un-immagine-generica-della-biblioteca.jpg" /> <!-- Opzionale ma consigliato -->
+<meta name="twitter:card" content="summary_large_image" />
+<!-- FINE META TAG -->
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -173,6 +181,13 @@
     display: flex; align-items: center; gap: .25rem;
   }
   .ics-btn:hover { border-color: var(--terra); color: var(--terra); }
+
+  
+  .wa-btn {
+    background: #25d366; border-color: #25d366; color: white; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .wa-btn:hover { background: #1ebe5d; border-color: #1ebe5d; color: white; }
 
   /* STATUS */
   .status-msg { text-align: center; padding: 3rem 1rem; color: var(--ink-mid); }
@@ -489,6 +504,23 @@ function renderList(){
 function cardHTML(e,i){
   const col=CAT_COLORS[e.categoria]||CAT_COLORS.altro;
   const desc=(e.descrizione||'').substring(0,110)+(e.descrizione&&e.descrizione.length>110?'…':'');
+  
+  // -- CREAZIONE MESSAGGIO WHATSAPP --
+  const slug = createSlug(e.titolo);
+  const dataFmt = `${DAYS[e.date.getDay()]} ${e.date.getDate()} ${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}`;
+  const shareUrl = window.location.origin + window.location.pathname + '?evento=' + slug;
+  
+  const testoWhatsApp = `📚 *${e.titolo}*
+
+📅 *Quando:* ${dataFmt}${e.ora ? ' ore ' + e.ora : ''}
+📍 *Dove:* ${e.luogo || CONFIG.nomeBiblioteca}
+
+📲 *Scopri di più e salva in agenda:*
+${shareUrl}`;
+
+  const msgWA = encodeURIComponent(testoWhatsApp);
+  // ----------------------------------
+
   return `
     <div class="event-card" data-idx="${i}" style="border-left-color:${col}">
       <div class="event-date-block">
@@ -506,8 +538,8 @@ function cardHTML(e,i){
       <div class="event-actions">
         <span class="event-badge" style="background:${col}22;color:${col}">${CAT_LABELS[e.categoria]||e.categoria}</span>
         <div style="display: flex; gap: 5px; margin-top: 6px;">
+          <a href="https://wa.me/?text=${msgWA}" target="_blank" class="ics-btn wa-btn" onclick="event.stopPropagation()">💬 WhatsApp</a>
           <button class="ics-btn save-btn" data-idx="${i}">📅 Salva</button>
-          <button class="ics-btn share-btn" data-idx="${i}">📲 Condividi</button>
         </div>
       </div>
     </div>`;
@@ -554,26 +586,63 @@ function updateMonthLabel(){
 }
 
 
+
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 function openModal(e){
-  const col=CAT_COLORS[e.categoria]||CAT_COLORS.altro;
-  document.getElementById('modal-cat').textContent=CAT_LABELS[e.categoria]||e.categoria;
-  document.getElementById('modal-cat').style.color=col;
-  document.getElementById('modal-title').textContent=e.titolo;
-  document.getElementById('modal-meta').innerHTML=`
-    ${e.date?`<b>📅</b> ${DAYS[e.date.getDay()]}, ${e.date.getDate()} ${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}<br>`:''}
-    ${e.ora?`<b>🕐</b> ${e.ora}${e.oraFine?' – '+e.oraFine:''}<br>`:''}
-    ${e.luogo?`<b>📍</b> ${e.luogo}`:''}
+  const col = CAT_COLORS[e.categoria] || CAT_COLORS.altro;
+  
+  // 1. Imposta la categoria
+  document.getElementById('modal-cat').textContent = CAT_LABELS[e.categoria] || e.categoria;
+  document.getElementById('modal-cat').style.color = col;
+
+  // 2. Gestione Immagine (Rimuove la vecchia se c'è, inserisce la nuova se esiste)
+  const oldImg = document.getElementById('modal-img-temp');
+  if (oldImg) oldImg.remove();
+
+  if (e.immagine) {
+    // Inserisce l'immagine prima del titolo
+    const imgHTML = `<img id="modal-img-temp" src="${e.immagine}" style="width:100%; border-radius:8px; margin-bottom:15px; max-height: 250px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">`;
+    document.getElementById('modal-title').insertAdjacentHTML('beforebegin', imgHTML);
+  }
+
+  // 3. Titolo e Meta info
+  document.getElementById('modal-title').textContent = e.titolo;
+  document.getElementById('modal-meta').innerHTML = `
+    ${e.date ? `<b>📅</b> ${DAYS[e.date.getDay()]}, ${e.date.getDate()} ${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}<br>` : ''}
+    ${e.ora ? `<b>🕐</b> ${e.ora}${e.oraFine ? ' – ' + e.oraFine : ''}<br>` : ''}
+    ${e.luogo ? `<b>📍</b> ${e.luogo}` : ''}
   `;
-  const desc=document.getElementById('modal-desc');
-  if(e.descrizione){ desc.textContent=e.descrizione; desc.style.display='block'; }
-  else desc.style.display='none';
+
+  // 4. Descrizione
+  const desc = document.getElementById('modal-desc');
+  if (e.descrizione) { 
+    desc.textContent = e.descrizione; 
+    desc.style.display = 'block'; 
+  } else { 
+    desc.style.display = 'none'; 
+  }
   
-  document.getElementById('modal-ics').onclick=()=>downloadICS(e);
-  setupShareButton(e);
+  // 5. Creazione link e testo formattato per WhatsApp
+  const slug = createSlug(e.titolo);
+  const dataFmt = e.date ? `${DAYS[e.date.getDay()]} ${e.date.getDate()} ${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}` : '';
+  const shareUrl = window.location.origin + window.location.pathname + '?evento=' + slug;
   
+  const testoWhatsApp = `📚 *${e.titolo}*\n\n📅 *Quando:* ${dataFmt}${e.ora ? ' ore ' + e.ora : ''}\n📍 *Dove:* ${e.luogo || CONFIG.nomeBiblioteca}\n\n📲 *Scopri di più e salva in agenda:*\n${shareUrl}`;
+  const msgWA = encodeURIComponent(testoWhatsApp);
+
+  // 6. Configurazione Bottoni
+  document.getElementById('modal-ics').onclick = () => downloadICS(e);
+  
+  const shareBtn = document.getElementById('modal-share');
+  shareBtn.textContent = "💬 Invia su WhatsApp";
+  shareBtn.className = "ics-btn wa-btn"; // Usa la classe verde creata per WhatsApp
+  shareBtn.onclick = () => window.open(`https://wa.me/?text=${msgWA}`, '_blank');
+  
+  // 7. Mostra la modale
   document.getElementById('modal-overlay').classList.add('open');
 }
+
+// Chiusura della modale (lascia queste due righe intatte sotto la funzione)
 document.getElementById('modal-close').onclick=()=>document.getElementById('modal-overlay').classList.remove('open');
 document.getElementById('modal-overlay').addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); });
 
