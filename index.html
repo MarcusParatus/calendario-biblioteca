@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario Eventi — Biblioteca</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:      #f5f0e8;
+    --cream-dark: #ede6d6;
+    --ink:        #1a1612;
+    --ink-mid:    #4a4035;
+    --terra:      #c0622a;
+    --terra-light:#e8895a;
+    --gold:       #c9a84c;
+    --cat-bambini:   #4caf82;
+    --cat-ragazzi:   #3a6b8a;
+    --cat-adulti:    #4a4035;
+    --cat-laboratori:#c0622a;
+    --cat-incontri:  #a84a5e;
+    --cat-altro:     #c9a84c;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --radius: 4px;
+    --shadow: 0 2px 20px rgba(26,22,18,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--cream); color: var(--ink); font-family: var(--font-body); min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 2.5rem 2rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    border: 2px solid rgba(201,168,76,0.18); border-radius: 50%;
+  }
+  header::after {
+    content: ''; position: absolute; bottom: -70px; right: 50px;
+    width: 150px; height: 150px;
+    border: 1px solid rgba(201,168,76,0.12); border-radius: 50%;
+  }
+  .header-inner { max-width: 960px; margin: 0 auto; position: relative; z-index: 1; }
+  .library-label {
+    font-size: .72rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: .5rem; font-weight: 400;
+  }
+  header h1 {
+    font-family: var(--font-display); font-size: clamp(1.8rem,4vw,2.8rem);
+    font-weight: 400; line-height: 1.1;
+  }
+  header h1 em { font-style: italic; color: var(--terra-light); }
+  .header-sub { margin-top: .5rem; font-size: .82rem; color: rgba(245,240,232,.45); font-weight: 300; }
+
+  /* FILTERS */
+  .filters-bar {
+    background: var(--ink-mid); padding: .7rem 2rem;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .filters-inner {
+    max-width: 960px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
+  }
+  .filter-label {
+    font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(245,240,232,.35); margin-right: .3rem; white-space: nowrap;
+  }
+  .filter-btn {
+    border: 1px solid rgba(245,240,232,.2); background: transparent;
+    color: rgba(245,240,232,.65); padding: .28rem .8rem;
+    border-radius: 20px; font-family: var(--font-body); font-size: .76rem;
+    cursor: pointer; transition: all .18s; white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .filter-btn.active { background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 500; }
+
+  .view-toggle { margin-left: auto; display: flex; gap: .25rem; }
+  .view-btn {
+    background: transparent; border: 1px solid rgba(245,240,232,.2);
+    color: rgba(245,240,232,.45); width: 28px; height: 28px;
+    border-radius: 3px; cursor: pointer; font-size: .85rem;
+    display: flex; align-items: center; justify-content: center; transition: all .18s;
+  }
+  .view-btn:hover, .view-btn.active { border-color: var(--gold); color: var(--gold); }
+
+  /* MAIN */
+  main { max-width: 960px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+  /* CONFIG BANNER */
+  .config-banner {
+    display: none; background: #fff9e6; border: 1px solid var(--gold);
+    border-radius: var(--radius); padding: .9rem 1.1rem;
+    font-size: .8rem; margin-bottom: 1.5rem; line-height: 1.6;
+  }
+  .config-banner strong { color: var(--terra); }
+  .config-banner code { background: var(--cream-dark); padding: .1rem .35rem; border-radius: 3px; font-size: .76rem; }
+
+  /* MONTH NAV */
+  .month-nav {
+    display: none; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;
+  }
+  .month-nav h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 400; }
+  .month-nav h2 span { color: var(--terra); }
+  .nav-btn {
+    background: white; border: 1px solid var(--cream-dark); width: 34px; height: 34px;
+    border-radius: 50%; cursor: pointer; font-size: .95rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .18s; box-shadow: var(--shadow);
+  }
+  .nav-btn:hover { background: var(--terra); border-color: var(--terra); color: white; }
+
+  /* GRID CALENDAR */
+  #view-grid { display: none; }
+  #view-grid.active { display: block; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--cream-dark); border-radius: var(--radius); overflow: hidden; }
+  .cal-day-header { background: var(--ink); color: rgba(245,240,232,.7); text-align: center; padding: .45rem .2rem; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
+  .cal-day { background: white; min-height: 78px; padding: .35rem; }
+  .cal-day:hover { background: #fdf8f0; }
+  .cal-day.empty { background: var(--cream); }
+  .cal-day.today .day-num { background: var(--terra); color: white; border-radius: 50%; }
+  .day-num { font-size: .75rem; font-weight: 500; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: .2rem; color: var(--ink-mid); }
+  .cal-dot {
+    font-size: .6rem; line-height: 1.3; padding: .1rem .3rem; border-radius: 3px;
+    margin-bottom: 2px; cursor: pointer; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; transition: opacity .15s;
+  }
+  .cal-dot:hover { opacity: .75; }
+
+  /* LIST VIEW */
+  #view-list.active { display: block; }
+  #view-list { display: none; }
+
+  .month-group { margin-bottom: 2.5rem; }
+  .month-group-title {
+    font-family: var(--font-display); font-style: italic; font-size: 1rem;
+    color: var(--ink-mid); border-bottom: 1px solid var(--cream-dark);
+    padding-bottom: .4rem; margin-bottom: 1rem;
+  }
+
+  .event-card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 1.1rem 1.3rem; margin-bottom: .75rem;
+    display: grid; grid-template-columns: 52px 1fr auto; gap: 1rem; align-items: start;
+    transition: transform .2s, box-shadow .2s; cursor: pointer;
+    border-left: 3px solid var(--border-color, var(--cream-dark));
+  }
+  .event-card:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(26,22,18,0.13); }
+
+  .event-date-block { text-align: center; }
+  .event-day-num { font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; line-height: 1; color: var(--num-color, var(--terra)); }
+  .event-day-name { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-mid); margin-top: .1rem; }
+
+  .event-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; line-height: 1.3; margin-bottom: .25rem; }
+  .event-meta { font-size: .76rem; color: var(--ink-mid); display: flex; flex-wrap: wrap; gap: .4rem .7rem; margin-bottom: .3rem; }
+  .event-desc { font-size: .8rem; color: var(--ink-mid); line-height: 1.5; }
+
+  .event-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+  .event-badge {
+    font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+    padding: .22rem .55rem; border-radius: 20px; font-weight: 500; white-space: nowrap;
+  }
+  .ics-btn {
+    background: transparent; border: 1px solid var(--cream-dark); color: var(--ink-mid);
+    padding: .3rem .65rem; border-radius: var(--radius); font-family: var(--font-body);
+    font-size: .7rem; cursor: pointer; transition: all .18s; white-space: nowrap;
+    display: flex; align-items: center; gap: .25rem;
+  }
+  .ics-btn:hover { border-color: var(--terra); color: var(--terra); }
+
+  /* STATUS */
+  .status-msg { text-align: center; padding: 3rem 1rem; color: var(--ink-mid); }
+  .status-msg .icon { font-size: 2.2rem; margin-bottom: .8rem; }
+  .status-msg p { font-family: var(--font-display); font-style: italic; font-size: 1.05rem; }
+  .status-msg small { display: block; margin-top: .35rem; font-size: .78rem; opacity: .6; }
+  .spinner { width: 26px; height: 26px; border: 2px solid var(--cream-dark); border-top-color: var(--terra); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto .8rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,22,18,.65); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--cream); border-radius: 8px; padding: 1.8rem; max-width: 460px; width: 100%; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: mIn .22s ease; }
+  @keyframes mIn { from { transform: translateY(18px); opacity: 0; } }
+  .modal-close { position: absolute; top: .9rem; right: .9rem; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--ink-mid); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background .15s; }
+  .modal-close:hover { background: var(--cream-dark); }
+  .modal-cat-label { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; margin-bottom: .5rem; }
+  .modal-title { font-family: var(--font-display); font-size: 1.35rem; margin-bottom: .75rem; line-height: 1.2; }
+  .modal-meta { font-size: .8rem; color: var(--ink-mid); line-height: 1.9; margin-bottom: .9rem; }
+  .modal-desc { font-size: .85rem; line-height: 1.6; color: var(--ink-mid); border-top: 1px solid var(--cream-dark); padding-top: .9rem; margin-bottom: 1.1rem; }
+  .modal-ics { width: 100%; justify-content: center; padding: .5rem; font-size: .78rem; }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 1.5rem; font-size: .7rem; color: var(--ink-mid); border-top: 1px solid var(--cream-dark); opacity: .55; }
+
+  @media (max-width: 580px) {
+    .event-card { grid-template-columns: 44px 1fr; }
+    .event-actions { grid-column: 1 / -1; flex-direction: row; }
+    .filter-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     ⚙️  CONFIGURAZIONE
+     Modifica solo questi valori
+     ═══════════════════════════════════════════ -->
+<script>
+const CONFIG = {
+  // L'ID del tuo Google Sheet (la parte lunga dell'URL)
+  // Es: https://docs.google.com/spreadsheets/d/  1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms  /edit
+  //                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  sheetId: "1khYOAiwdSGne5HjY3lpirYJQVOmjfbtKEZFk9_zYDFM",
+
+  nomeBiblioteca: "Biblioteca Comunale",
+  citta: "Torre Santa Susanna",
+};
+</script>
+<!-- ══════════════════════════════════════════ -->
+
+<header>
+  <div class="header-inner">
+    <div class="library-label" id="lib-label">Biblioteca Comunale</div>
+    <h1>Calendario <em>eventi</em></h1>
+    <div class="header-sub" id="lib-city">Torre Santa Susanna</div>
+  </div>
+</header>
+
+<div class="filters-bar">
+  <div class="filters-inner">
+    <span class="filter-label">Filtra</span>
+    <button class="filter-btn active" data-cat="tutti">Tutti</button>
+    <button class="filter-btn" data-cat="bambini">🟢 Bambini</button>
+    <button class="filter-btn" data-cat="ragazzi">🔵 Ragazzi</button>
+    <button class="filter-btn" data-cat="adulti">⚫ Adulti</button>
+    <button class="filter-btn" data-cat="laboratori">🟠 Laboratori</button>
+    <button class="filter-btn" data-cat="incontri">🔴 Incontri</button>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-list" title="Lista">☰</button>
+      <button class="view-btn" id="btn-grid" title="Mese">⊞</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="config-banner" id="config-banner">
+    ⚠️ <strong>Configurazione necessaria:</strong> apri il file HTML e sostituisci
+    <code>IL_TUO_SHEET_ID_QUI</code> con l'ID del tuo Google Sheet.
+    Intanto puoi vedere una demo con eventi di esempio.
+  </div>
+
+  <div class="month-nav" id="month-nav">
+    <button class="nav-btn" id="prev-month">‹</button>
+    <h2 id="month-label">Aprile <span>2025</span></h2>
+    <button class="nav-btn" id="next-month">›</button>
+  </div>
+
+  <div id="view-list" class="active">
+    <div class="status-msg" id="loading-msg">
+      <div class="spinner"></div>
+      <p>Caricamento eventi…</p>
+    </div>
+    <div id="events-list"></div>
+  </div>
+  <div id="view-grid">
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</main>
+
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-cat-label" id="modal-cat"></div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-meta" id="modal-meta"></div>
+    <div class="modal-desc" id="modal-desc"></div>
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button class="ics-btn modal-ics" id="modal-ics" style="flex: 1; justify-content: center;">📅 Salva in agenda</button>
+      <button class="ics-btn" id="modal-share" style="flex: 1; justify-content: center;">📲 Condividi</button>
+    </div>
+  </div>
+</div>
+
+<footer id="footer-text">Biblioteca Comunale — calendario aggiornato in tempo reale</footer>
+
+<script>
+// ── COSTANTI ────────────────────────────────────────────────────────────────
+const DAYS  = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const MONTHS= ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+               'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+const CAT_COLORS = {
+  bambini:'#4caf82', ragazzi:'#3a6b8a', adulti:'#4a4035',
+  laboratori:'#c0622a', incontri:'#a84a5e', altro:'#c9a84c'
+};
+const CAT_LABELS = {
+  bambini:'Bambini', ragazzi:'Ragazzi', adulti:'Adulti',
+  laboratori:'Laboratori', incontri:'Incontri', altro:'Altro'
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let allEvents   = [];
+let activeFilter= 'tutti';
+let view        = 'list';
+let navMonth    = new Date().getMonth();
+let navYear     = new Date().getFullYear();
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+document.getElementById('lib-label').textContent = CONFIG.nomeBiblioteca;
+document.getElementById('lib-city').textContent  = CONFIG.citta;
+document.getElementById('footer-text').textContent =
+  `${CONFIG.nomeBiblioteca} — calendario aggiornato in tempo reale`;
+document.title = `Calendario — ${CONFIG.nomeBiblioteca}`;
+
+// ── CATEGORIA ───────────────────────────────────────────────────────────────
+function normCat(c=''){
+  c = c.toLowerCase().trim();
+  if(c.includes('bambin'))   return 'bambini';
+  if(c.includes('ragaz'))    return 'ragazzi';
+  if(c.includes('adult'))    return 'adulti';
+  if(c.includes('labor'))    return 'laboratori';
+  if(c.includes('incon'))    return 'incontri';
+  return 'altro';
+}
+
+// ── CSV PARSER ───────────────────────────────────────────────────────────────
+function parseCSV(text){
+  const lines = text.trim().split('\n');
+  if(lines.length<2) return [];
+  const headers = lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  return lines.slice(1).map(line=>{
+    const vals=[]; let cur='', inQ=false;
+    for(const ch of line){
+      if(ch==='"') inQ=!inQ;
+      else if(ch===','&&!inQ){ vals.push(cur.trim()); cur=''; }
+      else cur+=ch;
+    }
+    vals.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r=>r.titolo);
+}
+
+// ── PARSE DATE ──────────────────────────────────────────────────────────────
+function parseDate(s=''){
+  if(!s) return null;
+  if(s.includes('/')){
+    const [d,m,y]=s.split('/');
+    return new Date(+y,+m-1,+d);
+  }
+  if(s.includes('-')){
+    const p=s.split('-');
+    if(p[0].length===4) return new Date(+p[0],+p[1]-1,+p[2]);
+    return new Date(+p[2],+p[1]-1,+p[0]);
+  }
+  return null;
+}
+
+
+// ── FETCH SHEET ─────────────────────────────────────────────────────────────
+async function fetchEvents(){
+  if(!CONFIG.sheetId||CONFIG.sheetId==='IL_TUO_SHEET_ID_QUI'){
+    document.getElementById('config-banner').style.display='block';
+    document.getElementById('loading-msg').style.display='none';
+    loadDemo(); return;
+  }
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/export?format=csv&gid=0`;
+  try{
+    const res=await fetch(url);
+    const text=await res.text();
+    const rows=parseCSV(text);
+    allEvents=rows.map(r=>({
+      titolo:     r.titolo||'',
+      date:       parseDate(r.data||r.date||''),
+      ora:        r.ora||'',
+      oraFine:    r.ora_fine||r.orafine||'',
+      categoria:  normCat(r.categoria||r.category||''),
+      descrizione:r.descrizione||r.description||'',
+      luogo:      r.luogo||r.place||'',
+    })).filter(e=>e.date);
+    allEvents.sort((a,b)=>a.date-b.date);
+    renderAll();
+
+    // CONTROLLO LINK CONDIVISO
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventoCondiviso = urlParams.get('evento');
+    if (eventoCondiviso) {
+      const targetEvent = allEvents.find(ev => createSlug(ev.titolo) === eventoCondiviso);
+      if (targetEvent) {
+        openModal(targetEvent);
+      }
+    }
+
+  }catch(e){
+    document.getElementById('loading-msg').innerHTML=
+      `<div class="icon">⚠️</div><p>Errore nel caricamento.</p>
+       <small>Controlla che il foglio sia pubblicato come CSV.</small>`;
+  }
+}
+
+// ── DEMO ─────────────────────────────────────────────────────────────────────
+function loadDemo(){
+  const t=new Date(), y=t.getFullYear(), m=t.getMonth();
+  allEvents=[
+    {titolo:'Lettura animata: Il Piccolo Principe', date:new Date(y,m,5), ora:'16:00', oraFine:'17:30', categoria:'bambini', descrizione:'Un viaggio tra le stelle con voci e illustrazioni dal vivo. Per bambini dai 5 anni.', luogo:'Sala lettura'},
+    {titolo:'Laboratorio di scrittura creativa',    date:new Date(y,m,8), ora:'18:00', oraFine:'19:30', categoria:'adulti',  descrizione:'Quattro incontri per scoprire la propria voce narrativa. Iscrizione consigliata.', luogo:'Sala conferenze'},
+    {titolo:"Incontro con l'autore: Maria Greco",   date:new Date(y,m,12),ora:'17:30', oraFine:'19:00', categoria:'incontri',descrizione:'Presentazione del romanzo "Le radici del vento". L\'autrice dialoga con i lettori.', luogo:'Salone principale'},
+    {titolo:'Club di lettura — mese corrente',      date:new Date(y,m,15),ora:'19:00', oraFine:'20:30', categoria:'adulti',  descrizione:'Discussione di questo mese: Elsa Morante, "La Storia". Tutti i lettori benvenuti.', luogo:'Sala riunioni'},
+    {titolo:'Laboratorio manga e fumetto',          date:new Date(y,m,19),ora:'15:30', oraFine:'17:00', categoria:'laboratori',descrizione:'Tavole, chine e storie brevi. Porta carta e matita. Per ragazzi 11–16 anni.', luogo:'Sala laboratori'},
+    {titolo:'Pomeriggio con i nonni: fiabe orali',  date:new Date(y,m,22),ora:'16:00', oraFine:'17:30', categoria:'bambini', descrizione:'Anziani del quartiere raccontano fiabe della tradizione locale ai più piccoli.', luogo:'Giardino'},
+    {titolo:'Presentazione: storia locale inedita', date:new Date(y,m,26),ora:'18:30', oraFine:'20:00', categoria:'incontri',descrizione:'Il prof. Rossi presenta documenti inediti sulla storia del paese tra Otto e Novecento.', luogo:'Salone principale'},
+    {titolo:'Laboratorio origami per bambini',      date:new Date(y,m+1,3),ora:'16:00',oraFine:'17:30', categoria:'bambini', descrizione:'Piegare la carta per creare animali e fiori. Dai 6 anni, accompagnati da un adulto.', luogo:'Sala lettura'},
+    {titolo:'Serata poesia dialettale',             date:new Date(y,m+1,9),ora:'20:00',oraFine:'21:30', categoria:'incontri',descrizione:'Letture e canti in dialetto salentino. Ingresso libero.', luogo:'Cortile interno'},
+    {titolo:'Laboratorio podcast: la tua voce',     date:new Date(y,m+1,14),ora:'17:00',oraFine:'18:30',categoria:'ragazzi', descrizione:'Tecniche base di registrazione e storytelling audio. Per ragazzi 13–18 anni.', luogo:'Sala conferenze'},
+  ].filter(e=>e.date>=new Date(new Date().setHours(0,0,0,0)));
+  renderAll();
+}
+
+// ── FILTER ──────────────────────────────────────────────────────────────────
+function visibleEvents(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  return allEvents.filter(e=>{
+    if(!e.date||e.date<now) return false;
+    return activeFilter==='tutti'||e.categoria===activeFilter;
+  });
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────────────────────
+function renderAll(){
+  document.getElementById('loading-msg').style.display='none';
+  if(view==='list') renderList(); else renderGrid();
+}
+
+function renderList(){
+  const container=document.getElementById('events-list');
+  const evs=visibleEvents();
+  if(!evs.length){
+    container.innerHTML=`<div class="status-msg"><div class="icon">📚</div><p>Nessun evento in programma.</p><small>Torna presto!</small></div>`;
+    return;
+  }
+  // Raggruppa per mese
+  const groups={};
+  evs.forEach(e=>{
+    const k=`${e.date.getFullYear()}-${String(e.date.getMonth()).padStart(2,'0')}`;
+    if(!groups[k]) groups[k]={label:`${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}`,evs:[]};
+    groups[k].evs.push(e);
+  });
+  container.innerHTML=Object.values(groups).map(g=>`
+    <div class="month-group">
+      <div class="month-group-title">${g.label}</div>
+      ${g.evs.map(e=>cardHTML(e,evs.indexOf(e))).join('')}
+    </div>
+  `).join('');
+  
+  // Click sull'intera card per aprire la modale
+  container.querySelectorAll('.event-card').forEach(card=>{
+    card.addEventListener('click',ev=>{
+      if(ev.target.closest('.ics-btn')) return; // Se clicchi un bottone, non aprire la modale
+      openModal(evs[+card.dataset.idx]);
+    });
+  });
+  
+  // Click sul bottone Salva
+  container.querySelectorAll('.save-btn').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ 
+      ev.stopPropagation(); 
+      downloadICS(evs[+btn.dataset.idx]); 
+    });
+  });
+
+  // Click sul bottone Condividi
+  container.querySelectorAll('.share-btn').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ 
+      ev.stopPropagation(); 
+      eseguiCondivisione(evs[+btn.dataset.idx]); 
+    });
+  });
+}
+
+function cardHTML(e,i){
+  const col=CAT_COLORS[e.categoria]||CAT_COLORS.altro;
+  const desc=(e.descrizione||'').substring(0,110)+(e.descrizione&&e.descrizione.length>110?'…':'');
+  return `
+    <div class="event-card" data-idx="${i}" style="border-left-color:${col}">
+      <div class="event-date-block">
+        <div class="event-day-num" style="color:${col}">${e.date.getDate()}</div>
+        <div class="event-day-name">${DAYS[e.date.getDay()]}</div>
+      </div>
+      <div class="event-info">
+        <div class="event-title">${e.titolo}</div>
+        <div class="event-meta">
+          ${e.ora?`<span>🕐 ${e.ora}${e.oraFine?' – '+e.oraFine:''}</span>`:''}
+          ${e.luogo?`<span>📍 ${e.luogo}</span>`:''}
+        </div>
+        ${desc?`<div class="event-desc">${desc}</div>`:''}
+      </div>
+      <div class="event-actions">
+        <span class="event-badge" style="background:${col}22;color:${col}">${CAT_LABELS[e.categoria]||e.categoria}</span>
+        <div style="display: flex; gap: 5px; margin-top: 6px;">
+          <button class="ics-btn save-btn" data-idx="${i}">📅 Salva</button>
+          <button class="ics-btn share-btn" data-idx="${i}">📲 Condividi</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── RENDER GRID ───────────────────────────────────────────────────────────────
+function renderGrid(){
+  updateMonthLabel();
+  const grid=document.getElementById('cal-grid');
+  const y=navYear, m=navMonth;
+  const firstDay=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const today=new Date();
+  const monthEvs=allEvents.filter(e=>{
+    if(!e.date) return false;
+    if(activeFilter!=='tutti'&&e.categoria!==activeFilter) return false;
+    return e.date.getFullYear()===y&&e.date.getMonth()===m;
+  });
+  const headers=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="cal-day-header">${d}</div>`).join('');
+  const offset=(firstDay===0?6:firstDay-1);
+  let cells='';
+  for(let i=0;i<offset;i++) cells+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=days;d++){
+    const isToday=today.getDate()===d&&today.getMonth()===m&&today.getFullYear()===y;
+    const de=monthEvs.filter(e=>e.date.getDate()===d);
+    const dots=de.map(e=>{
+      const col=CAT_COLORS[e.categoria]||CAT_COLORS.altro;
+      const idx = allEvents.indexOf(e);
+      return `<div class="cal-dot" style="background:${col}22;color:${col}" data-title="${e.titolo.replace(/"/g,"'")}">${e.ora?e.ora+' ':''}${e.titolo}</div>`;
+    }).join('');
+    cells+=`<div class="cal-day${isToday?' today':''}"><div class="day-num">${d}</div>${dots}</div>`;
+  }
+  grid.innerHTML=headers+cells;
+  grid.querySelectorAll('.cal-dot').forEach(dot=>{
+    dot.addEventListener('click',()=>{
+      const ev = allEvents[dot.dataset.idx];
+      if(ev) openModal(ev);
+    });
+  });
+}
+
+function updateMonthLabel(){
+  document.getElementById('month-label').innerHTML=`${MONTHS[navMonth]} <span>${navYear}</span>`;
+}
+
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(e){
+  const col=CAT_COLORS[e.categoria]||CAT_COLORS.altro;
+  document.getElementById('modal-cat').textContent=CAT_LABELS[e.categoria]||e.categoria;
+  document.getElementById('modal-cat').style.color=col;
+  document.getElementById('modal-title').textContent=e.titolo;
+  document.getElementById('modal-meta').innerHTML=`
+    ${e.date?`<b>📅</b> ${DAYS[e.date.getDay()]}, ${e.date.getDate()} ${MONTHS[e.date.getMonth()]} ${e.date.getFullYear()}<br>`:''}
+    ${e.ora?`<b>🕐</b> ${e.ora}${e.oraFine?' – '+e.oraFine:''}<br>`:''}
+    ${e.luogo?`<b>📍</b> ${e.luogo}`:''}
+  `;
+  const desc=document.getElementById('modal-desc');
+  if(e.descrizione){ desc.textContent=e.descrizione; desc.style.display='block'; }
+  else desc.style.display='none';
+  
+  document.getElementById('modal-ics').onclick=()=>downloadICS(e);
+  setupShareButton(e);
+  
+  document.getElementById('modal-overlay').classList.add('open');
+}
+document.getElementById('modal-close').onclick=()=>document.getElementById('modal-overlay').classList.remove('open');
+document.getElementById('modal-overlay').addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); });
+
+// ── CONDIVISIONE EVENTO SINGOLO ──────────────────────────────────────────────
+function createSlug(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+}
+
+// Questa è la funzione che fa il lavoro vero e proprio
+async function eseguiCondivisione(e) {
+  const slug = createSlug(e.titolo);
+  const shareUrl = window.location.origin + window.location.pathname + '?evento=' + slug;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: e.titolo,
+        text: `Guarda questo evento alla Biblioteca Comunale: ${e.titolo}`,
+        url: shareUrl
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        // Errore reale (non annullamento volontario utente) → fallback clipboard
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          alert('🔗 Link copiato! Ora puoi incollarlo su WhatsApp, Facebook o via Email.');
+        } catch {
+          prompt('Copia questo link:', shareUrl);
+        }
+      }
+      // Se è AbortError (utente ha chiuso il menu) → non fare nulla
+    }
+  } else {
+    // Desktop senza navigator.share → clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('🔗 Link copiato! Ora puoi incollarlo su WhatsApp, Facebook o via Email.');
+    } catch {
+      prompt('Copia questo link:', shareUrl);
+    }
+  }
+}
+
+// Questa collega il bottone dentro la finestrella (modale)
+function setupShareButton(e) {
+  const shareBtn = document.getElementById('modal-share');
+  if(!shareBtn) return;
+  shareBtn.onclick = () => eseguiCondivisione(e);
+}
+
+// ── SALVA IN AGENDA (GOOGLE CALENDAR) ───────────────────────────────────────
+function icsDate(date,time){
+  const y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0'), d=String(date.getDate()).padStart(2,'0');
+  if(!time) return `${y}${m}${d}`;
+  const[h,min]=(time+':00').split(':');
+  return `${y}${m}${d}T${h.padStart(2,'0')}${(min||'00').padStart(2,'0')}00`;
+}
+
+function downloadICS(e){
+  const start = icsDate(e.date, e.ora);
+  let end = start;
+  if (e.oraFine) {
+    end = icsDate(e.date, e.oraFine);
+  } else if (e.ora) {
+    const [h, min] = e.ora.split(':');
+    const endH = String(parseInt(h) + 1).padStart(2, '0');
+    end = icsDate(e.date, `${endH}:${min}`);
+  }
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(e.titolo)}&dates=${start}/${end}&details=${encodeURIComponent(e.descrizione || '')}&location=${encodeURIComponent(e.luogo || '')}`;
+  window.open(googleUrl, '_blank');
+}
+
+// ── CONTROLLI ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter=btn.dataset.cat;
+    renderAll();
+  });
+});
+document.getElementById('btn-list').addEventListener('click',()=>{
+  view='list';
+  document.getElementById('view-list').classList.add('active');
+  document.getElementById('view-grid').classList.remove('active');
+  document.getElementById('month-nav').style.display='none';
+  document.getElementById('btn-list').classList.add('active');
+  document.getElementById('btn-grid').classList.remove('active');
+  renderList();
+});
+document.getElementById('btn-grid').addEventListener('click',()=>{
+  view='grid';
+  document.getElementById('view-grid').classList.add('active');
+  document.getElementById('view-list').classList.remove('active');
+  document.getElementById('month-nav').style.display='flex';
+  document.getElementById('btn-grid').classList.add('active');
+  document.getElementById('btn-list').classList.remove('active');
+  renderGrid();
+});
+document.getElementById('prev-month').addEventListener('click',()=>{
+  if(navMonth===0){navMonth=11;navYear--;} else navMonth--;
+  renderGrid();
+});
+document.getElementById('next-month').addEventListener('click',()=>{
+  if(navMonth===11){navMonth=0;navYear++;} else navMonth++;
+  renderGrid();
+});
+
+// ── START ──────────────────────────────────────────────────────────────────────
+fetchEvents();
+</script>
+</body>
+</html>
